@@ -55,7 +55,10 @@ export const SupplierDashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="spinner h-16 w-16 mx-auto mb-4"></div>
+          <p className="text-secondary-600 font-medium">Loading available RFPs...</p>
+        </div>
       </div>
     );
   }
@@ -64,101 +67,198 @@ export const SupplierDashboard: React.FC = () => {
   const publishedRFPs = rfps?.items?.filter((rfp: any) => rfp.status === 'PUBLISHED') || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Supplier Dashboard</h1>
-            <div className="text-sm text-gray-600">
-              {publishedRFPs.length} published RFPs available
+          {/* Header Section */}
+          <div className="mb-8 animate-fade-in-down">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-4xl font-bold text-gradient mb-2">
+                  Supplier Dashboard
+                </h1>
+                <p className="text-secondary-600 text-lg">
+                  Discover and respond to RFPs from buyers
+                </p>
+              </div>
+              <div className="mt-4 sm:mt-0">
+                <div className="card p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-gradient-to-r from-success-500 to-success-600 rounded-xl flex items-center justify-center">
+                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-secondary-600">Available RFPs</p>
+                      <p className="text-2xl font-bold text-secondary-900">{publishedRFPs.length}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Response Form */}
           {showResponseForm && selectedRFP && (
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">
-                Respond to: {selectedRFP.title}
-              </h2>
-              <div className="mb-4 p-4 bg-gray-50 rounded-md">
-                <h3 className="font-medium text-gray-900">RFP Description:</h3>
-                <p className="text-sm text-gray-600 mt-1">{selectedRFP.description}</p>
+            <div className="card-elevated p-8 mb-8 animate-scale-in">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-secondary-900">
+                  Respond to RFP
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowResponseForm(false);
+                    setSelectedRFP(null);
+                  }}
+                  className="text-secondary-400 hover:text-secondary-600 transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mb-6 p-6 bg-gradient-to-r from-primary-50 to-accent-50 rounded-2xl border border-primary-200">
+                <h3 className="text-lg font-semibold text-secondary-900 mb-2">{selectedRFP.title}</h3>
+                <p className="text-secondary-700 mb-4">{selectedRFP.description}</p>
                 {selectedRFP.requirements && (
-                  <>
-                    <h3 className="font-medium text-gray-900 mt-3">Requirements:</h3>
-                    <p className="text-sm text-gray-600 mt-1">{selectedRFP.requirements}</p>
-                  </>
+                  <div>
+                    <h4 className="font-semibold text-secondary-800 mb-2">Requirements:</h4>
+                    <p className="text-secondary-700">{selectedRFP.requirements}</p>
+                  </div>
                 )}
               </div>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div>
-                  <label htmlFor="content" className="block text-sm font-medium text-gray-700">
-                    Your Response
+                  <label htmlFor="content" className="block text-sm font-semibold text-secondary-700 mb-2">
+                    Your Proposal
                   </label>
                   <textarea
                     {...register('content')}
-                    rows={6}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    rows={8}
+                    className="input-field resize-none"
                     placeholder="Describe your proposal, pricing, timeline, and any other relevant details..."
                   />
                   {errors.content && (
-                    <p className="mt-1 text-sm text-red-600">{errors.content.message}</p>
+                    <p className="mt-2 text-sm text-error-600 flex items-center">
+                      <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {errors.content.message}
+                    </p>
                   )}
                 </div>
 
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end space-x-4">
                   <button
                     type="button"
                     onClick={() => {
                       setShowResponseForm(false);
                       setSelectedRFP(null);
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="btn-secondary"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={respondMutation.isPending}
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    className="btn-primary flex items-center space-x-2"
                   >
-                    {respondMutation.isPending ? 'Submitting...' : 'Submit Response'}
+                    {respondMutation.isPending ? (
+                      <>
+                        <div className="spinner h-4 w-4"></div>
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        <span>Submit Response</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
             </div>
           )}
 
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Published RFPs</h2>
+          {/* RFPs List */}
+          <div className="card-elevated animate-fade-in-up">
+            <div className="p-6 border-b border-secondary-200">
+              <h2 className="text-2xl font-bold text-secondary-900">Published RFPs</h2>
+              <p className="text-secondary-600 mt-1">Browse and respond to available opportunities</p>
+            </div>
+            
+            <div className="p-6">
               {publishedRFPs.length === 0 ? (
-                <p className="text-gray-500">No published RFPs available at the moment.</p>
+                <div className="text-center py-12">
+                  <div className="h-24 w-24 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="h-12 w-12 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-secondary-900 mb-2">No RFPs available</h3>
+                  <p className="text-secondary-600">Check back later for new opportunities</p>
+                </div>
               ) : (
                 <div className="space-y-4">
-                  {publishedRFPs.map((rfp: any) => (
-                    <div key={rfp.id} className="border border-gray-200 rounded-lg p-4">
+                  {publishedRFPs.map((rfp: any, index: number) => (
+                    <div 
+                      key={rfp.id} 
+                      className="card p-6 hover:shadow-medium transition-all duration-300 animate-fade-in-up"
+                      style={{animationDelay: `${index * 0.1}s`}}
+                    >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900">{rfp.title}</h3>
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">{rfp.description}</p>
+                          <div className="flex items-center space-x-3 mb-3">
+                            <h3 className="text-xl font-semibold text-secondary-900">{rfp.title}</h3>
+                            <span className="status-badge status-published">
+                              Published
+                            </span>
+                          </div>
+                          <p className="text-secondary-600 mb-4 line-clamp-2">{rfp.description}</p>
                           {rfp.requirements && (
-                            <p className="text-sm text-gray-500 mt-2">
-                              <span className="font-medium">Requirements:</span> {rfp.requirements}
-                            </p>
+                            <div className="mb-4">
+                              <p className="text-sm font-medium text-secondary-700 mb-1">Requirements:</p>
+                              <p className="text-sm text-secondary-600 line-clamp-2">{rfp.requirements}</p>
+                            </div>
                           )}
-                          <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-                            <span>Created: {new Date(rfp.created_at).toLocaleDateString()}</span>
-                            <span>Deadline: {rfp.deadline ? new Date(rfp.deadline).toLocaleDateString() : 'Not specified'}</span>
+                          <div className="flex items-center space-x-4 text-sm text-secondary-500">
+                            <span className="flex items-center">
+                              <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Published {new Date(rfp.created_at).toLocaleDateString()}
+                            </span>
+                            {rfp.deadline && (
+                              <span className="flex items-center">
+                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Deadline: {new Date(rfp.deadline).toLocaleDateString()}
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="flex flex-col space-y-2 ml-4">
+                        <div className="flex flex-col space-y-2 ml-6">
                           <button
                             onClick={() => handleRespond(rfp)}
-                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md"
+                            className="btn-primary text-sm px-4 py-2"
                           >
+                            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
                             Respond
                           </button>
-                          <button className="px-3 py-1 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm rounded-md">
+                          <button className="btn-secondary text-sm px-4 py-2">
+                            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                             View Details
                           </button>
                         </div>
