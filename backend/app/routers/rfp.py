@@ -37,18 +37,30 @@ async def create_rfp(
 @router.get("", response_model=PaginatedRFPs)
 async def list_rfps(
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user),
     q: Optional[str] = Query(default=None, description="Search query stub"),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
     stmt = select(RFP)
     count_stmt = select(func.count()).select_from(RFP)
+    
+    # Role-based filtering
+    if current_user.role == UserRole.buyer:
+        # Buyers can only see their own RFPs
+        stmt = stmt.where(RFP.owner_id == current_user.id)
+        count_stmt = count_stmt.where(RFP.owner_id == current_user.id)
+    elif current_user.role == UserRole.supplier:
+        # Suppliers can only see published RFPs
+        stmt = stmt.where(RFP.status == RFPStatus.PUBLISHED)
+        count_stmt = count_stmt.where(RFP.status == RFPStatus.PUBLISHED)
+    
     # Simple stub for search: title ilike
     if q:
         from sqlalchemy import or_
-
-        stmt = stmt.where(RFP.title.ilike(f"%{q}%"))
-        count_stmt = count_stmt.where(RFP.title.ilike(f"%{q}%"))
+        search_condition = RFP.title.ilike(f"%{q}%")
+        stmt = stmt.where(search_condition)
+        count_stmt = count_stmt.where(search_condition)
 
     total = (await session.execute(count_stmt)).scalar_one()
     items = (await session.execute(stmt.order_by(RFP.id.desc()).limit(limit).offset(offset))).scalars().all()
@@ -173,5 +185,82 @@ async def change_status(
     
     await session.refresh(rfp)
     return rfp
+
+
+@router.get("/supplier/responses")
+async def get_supplier_responses(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_role(UserRole.supplier))
+):
+    """Get all responses submitted by the current supplier"""
+    stmt = select(SupplierResponse, RFP, User).join(
+        RFP, SupplierResponse.rfp_id == RFP.id
+    ).join(
+        User, RFP.owner_id == User.id
+    ).where(
+        SupplierResponse.supplier_id == current_user.id
+    ).order_by(SupplierResponse.created_at.desc())
+    
+    results = (await session.execute(stmt)).all()
+    
+    responses = []
+    for response, rfp, owner in results:
+        responses.append({
+            "id": response.id,
+            "rfp_id": rfp.id,
+            "rfp_title": rfp.title,
+            "rfp_status": rfp.status.value,
+            "owner_email": owner.email,
+            "content": response.content,
+            "submitted_at": response.created_at,
+            "rfp_created_at": rfp.created_at
+        })
+    
+    return {"responses": responses}
+
+
+@router.get("/supplier/published")
+async def get_published_rfps_with_owners(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_role(UserRole.supplier)),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """Get all published RFPs with owner information for suppliers"""
+    stmt = select(RFP, User).join(
+        User, RFP.owner_id == User.id
+    ).where(
+        RFP.status == RFPStatus.PUBLISHED
+    ).order_by(RFP.id.desc()).limit(limit).offset(offset)
+    
+    count_stmt = select(func.count()).select_from(RFP).where(
+        RFP.status == RFPStatus.PUBLISHED
+    )
+    
+    total = (await session.execute(count_stmt)).scalar_one()
+    results = (await session.execute(stmt)).all()
+    
+    rfps_with_owners = []
+    for rfp, owner in results:
+        rfps_with_owners.append({
+            "id": rfp.id,
+            "title": rfp.title,
+            "description": rfp.description,
+            "requirements": rfp.requirements,
+            "status": rfp.status.value,
+            "created_at": rfp.created_at,
+            "deadline": rfp.deadline,
+            "owner": {
+                "id": owner.id,
+                "email": owner.email
+            }
+        })
+    
+    return {
+        "total": total,
+        "items": rfps_with_owners,
+        "limit": limit,
+        "offset": offset
+    }
 
 

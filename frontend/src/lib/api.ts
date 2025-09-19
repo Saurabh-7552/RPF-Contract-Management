@@ -126,6 +126,17 @@ class ApiClient {
     return response.data;
   }
 
+  // Supplier-specific endpoints
+  async getSupplierResponses() {
+    const response = await this.client.get('/rfps/supplier/responses');
+    return response.data;
+  }
+
+  async getPublishedRFPsWithOwners(limit = 10, offset = 0) {
+    const response = await this.client.get(`/rfps/supplier/published?limit=${limit}&offset=${offset}`);
+    return response.data;
+  }
+
   // Upload endpoints
   async getPresignedUrl(filename: string, contentType: string) {
     const response = await this.client.post('/uploads/presign', { filename, content_type: contentType });

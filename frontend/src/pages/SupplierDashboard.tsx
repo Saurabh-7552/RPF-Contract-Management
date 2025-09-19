@@ -14,6 +14,7 @@ type ResponseForm = z.infer<typeof responseSchema>;
 export const SupplierDashboard: React.FC = () => {
   const [selectedRFP, setSelectedRFP] = useState<any>(null);
   const [showResponseForm, setShowResponseForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<'opportunities' | 'proposals'>('opportunities');
   const queryClient = useQueryClient();
 
   const {
@@ -25,16 +26,24 @@ export const SupplierDashboard: React.FC = () => {
     resolver: zodResolver(responseSchema),
   });
 
-  const { data: rfps, isLoading } = useQuery({
-    queryKey: ['rfps', 'published'],
-    queryFn: () => apiClient.getRFPs(1, 50), // Get more RFPs for suppliers
+  // Fetch published RFPs with owner information
+  const { data: publishedRFPs, isLoading: rfpsLoading } = useQuery({
+    queryKey: ['published-rfps'],
+    queryFn: () => apiClient.getPublishedRFPsWithOwners(50, 0),
+  });
+
+  // Fetch supplier's submitted responses
+  const { data: supplierResponses, isLoading: responsesLoading } = useQuery({
+    queryKey: ['supplier-responses'],
+    queryFn: () => apiClient.getSupplierResponses(),
   });
 
   const respondMutation = useMutation({
     mutationFn: ({ rfpId, content }: { rfpId: number; content: string }) =>
       apiClient.respondToRFP(rfpId, content),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rfps'] });
+      queryClient.invalidateQueries({ queryKey: ['published-rfps'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-responses'] });
       setShowResponseForm(false);
       setSelectedRFP(null);
       reset();
@@ -52,19 +61,19 @@ export const SupplierDashboard: React.FC = () => {
     setShowResponseForm(true);
   };
 
-  if (isLoading) {
+  if (rfpsLoading || responsesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="spinner h-16 w-16 mx-auto mb-4"></div>
-          <p className="text-secondary-600 font-medium">Loading available RFPs...</p>
+          <p className="text-secondary-600 font-medium">Loading your dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // Filter only published RFPs for suppliers
-  const publishedRFPs = rfps?.items?.filter((rfp: any) => rfp.status === 'PUBLISHED') || [];
+  const publishedRFPsList = publishedRFPs?.items || [];
+  const responsesList = supplierResponses?.responses || [];
 
   return (
     <div className="min-h-screen">
@@ -78,10 +87,10 @@ export const SupplierDashboard: React.FC = () => {
                   Supplier Dashboard
                 </h1>
                 <p className="text-secondary-600 text-lg">
-                  Discover and respond to RFPs from buyers
+                  Discover opportunities and manage your proposals
                 </p>
               </div>
-              <div className="mt-4 sm:mt-0">
+              <div className="mt-4 sm:mt-0 flex space-x-4">
                 <div className="card p-4">
                   <div className="flex items-center space-x-3">
                     <div className="h-10 w-10 bg-gradient-to-r from-success-500 to-success-600 rounded-xl flex items-center justify-center">
@@ -91,11 +100,62 @@ export const SupplierDashboard: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-secondary-600">Available RFPs</p>
-                      <p className="text-2xl font-bold text-secondary-900">{publishedRFPs.length}</p>
+                      <p className="text-2xl font-bold text-secondary-900">{publishedRFPsList.length}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="card p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
+                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-secondary-600">My Proposals</p>
+                      <p className="text-2xl font-bold text-secondary-900">{responsesList.length}</p>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="mb-8 animate-fade-in-up">
+            <div className="border-b border-secondary-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('opportunities')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'opportunities'
+                      ? 'border-primary-500 text-primary-600'
+                      : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>Available Opportunities</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('proposals')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'proposals'
+                      ? 'border-primary-500 text-primary-600'
+                      : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>My Proposals</span>
+                  </div>
+                </button>
+              </nav>
             </div>
           </div>
 
@@ -104,8 +164,8 @@ export const SupplierDashboard: React.FC = () => {
             <div className="card-elevated p-8 mb-8 animate-scale-in">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-secondary-900">
-                  Respond to RFP
-                </h2>
+                  Submit Proposal
+              </h2>
                 <button
                   onClick={() => {
                     setShowResponseForm(false);
@@ -128,6 +188,20 @@ export const SupplierDashboard: React.FC = () => {
                     <p className="text-secondary-700">{selectedRFP.requirements}</p>
                   </div>
                 )}
+                <div className="mt-4 flex items-center space-x-4 text-sm text-secondary-600">
+                  <span className="flex items-center">
+                    <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Buyer: {selectedRFP.owner?.email}
+                  </span>
+                  <span className="flex items-center">
+                    <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Posted: {new Date(selectedRFP.created_at).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -177,7 +251,7 @@ export const SupplierDashboard: React.FC = () => {
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
-                        <span>Submit Response</span>
+                        <span>Submit Proposal</span>
                       </>
                     )}
                   </button>
@@ -186,79 +260,86 @@ export const SupplierDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* RFPs List */}
-          <div className="card-elevated animate-fade-in-up">
-            <div className="p-6 border-b border-secondary-200">
-              <h2 className="text-2xl font-bold text-secondary-900">Published RFPs</h2>
-              <p className="text-secondary-600 mt-1">Browse and respond to available opportunities</p>
-            </div>
-            
-            <div className="p-6">
-              {publishedRFPs.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="h-24 w-24 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="h-12 w-12 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+          {/* Tab Content */}
+          {activeTab === 'opportunities' ? (
+            <div className="card-elevated animate-fade-in-up">
+              <div className="p-6 border-b border-secondary-200">
+                <h2 className="text-2xl font-bold text-secondary-900">Available Opportunities</h2>
+                <p className="text-secondary-600 mt-1">Browse and respond to published RFPs from buyers</p>
+              </div>
+              
+              <div className="p-6">
+                {publishedRFPsList.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="h-24 w-24 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="h-12 w-12 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-secondary-900 mb-2">No opportunities available</h3>
+                    <p className="text-secondary-600">Check back later for new RFPs from buyers</p>
                   </div>
-                  <h3 className="text-lg font-semibold text-secondary-900 mb-2">No RFPs available</h3>
-                  <p className="text-secondary-600">Check back later for new opportunities</p>
-                </div>
               ) : (
                 <div className="space-y-4">
-                  {publishedRFPs.map((rfp: any, index: number) => (
-                    <div 
-                      key={rfp.id} 
-                      className="card p-6 hover:shadow-medium transition-all duration-300 animate-fade-in-up"
-                      style={{animationDelay: `${index * 0.1}s`}}
-                    >
+                    {publishedRFPsList.map((rfp: any, index: number) => (
+                      <div 
+                        key={rfp.id} 
+                        className="card p-6 hover:shadow-medium transition-all duration-300 animate-fade-in-up"
+                        style={{animationDelay: `${index * 0.1}s`}}
+                      >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <h3 className="text-xl font-semibold text-secondary-900">{rfp.title}</h3>
-                            <span className="status-badge status-published">
-                              Published
-                            </span>
-                          </div>
-                          <p className="text-secondary-600 mb-4 line-clamp-2">{rfp.description}</p>
-                          {rfp.requirements && (
-                            <div className="mb-4">
-                              <p className="text-sm font-medium text-secondary-700 mb-1">Requirements:</p>
-                              <p className="text-sm text-secondary-600 line-clamp-2">{rfp.requirements}</p>
+                            <div className="flex items-center space-x-3 mb-3">
+                              <h3 className="text-xl font-semibold text-secondary-900">{rfp.title}</h3>
+                              <span className="status-badge status-published">
+                                Published
+                              </span>
                             </div>
-                          )}
-                          <div className="flex items-center space-x-4 text-sm text-secondary-500">
-                            <span className="flex items-center">
-                              <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              Published {new Date(rfp.created_at).toLocaleDateString()}
-                            </span>
-                            {rfp.deadline && (
+                            <p className="text-secondary-600 mb-4 line-clamp-2">{rfp.description}</p>
+                          {rfp.requirements && (
+                              <div className="mb-4">
+                                <p className="text-sm font-medium text-secondary-700 mb-1">Requirements:</p>
+                                <p className="text-sm text-secondary-600 line-clamp-2">{rfp.requirements}</p>
+                              </div>
+                            )}
+                            <div className="flex items-center space-x-4 text-sm text-secondary-500">
                               <span className="flex items-center">
                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
-                                Deadline: {new Date(rfp.deadline).toLocaleDateString()}
+                                Buyer: {rfp.owner?.email}
                               </span>
-                            )}
+                              <span className="flex items-center">
+                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Posted: {new Date(rfp.created_at).toLocaleDateString()}
+                              </span>
+                              {rfp.deadline && (
+                                <span className="flex items-center">
+                                  <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  Deadline: {new Date(rfp.deadline).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-col space-y-2 ml-6">
+                          <div className="flex flex-col space-y-2 ml-6">
                           <button
                             onClick={() => handleRespond(rfp)}
-                            className="btn-primary text-sm px-4 py-2"
+                              className="btn-primary text-sm px-4 py-2"
                           >
-                            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
-                            Respond
+                              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                              </svg>
+                              Submit Proposal
                           </button>
-                          <button className="btn-secondary text-sm px-4 py-2">
-                            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
+                            <button className="btn-secondary text-sm px-4 py-2">
+                              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
                             View Details
                           </button>
                         </div>
@@ -269,12 +350,100 @@ export const SupplierDashboard: React.FC = () => {
               )}
             </div>
           </div>
+          ) : (
+            <div className="card-elevated animate-fade-in-up">
+              <div className="p-6 border-b border-secondary-200">
+                <h2 className="text-2xl font-bold text-secondary-900">My Proposals</h2>
+                <p className="text-secondary-600 mt-1">Track your submitted proposals and their status</p>
+              </div>
+              
+              <div className="p-6">
+                {responsesList.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="h-24 w-24 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="h-12 w-12 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-secondary-900 mb-2">No proposals submitted yet</h3>
+                    <p className="text-secondary-600 mb-6">Start by browsing available opportunities and submitting your first proposal</p>
+                    <button
+                      onClick={() => setActiveTab('opportunities')}
+                      className="btn-primary"
+                    >
+                      Browse Opportunities
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {responsesList.map((response: any, index: number) => (
+                      <div 
+                        key={response.id} 
+                        className="card p-6 hover:shadow-medium transition-all duration-300 animate-fade-in-up"
+                        style={{animationDelay: `${index * 0.1}s`}}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-3">
+                              <h3 className="text-xl font-semibold text-secondary-900">{response.rfp_title}</h3>
+                              <span className={`status-badge ${
+                                response.rfp_status === 'DRAFT' ? 'status-draft' :
+                                response.rfp_status === 'PUBLISHED' ? 'status-published' :
+                                response.rfp_status === 'RESPONSE_SUBMITTED' ? 'status-response-submitted' :
+                                response.rfp_status === 'UNDER_REVIEW' ? 'status-under-review' :
+                                response.rfp_status === 'APPROVED' ? 'status-approved' :
+                                'status-rejected'
+                              }`}>
+                                {response.rfp_status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <p className="text-secondary-600 mb-4 line-clamp-3">{response.content}</p>
+                            <div className="flex items-center space-x-4 text-sm text-secondary-500">
+                              <span className="flex items-center">
+                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Buyer: {response.owner_email}
+                              </span>
+                              <span className="flex items-center">
+                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Submitted: {new Date(response.submitted_at).toLocaleDateString()}
+                              </span>
+                              <span className="flex items-center">
+                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                RFP Posted: {new Date(response.rfp_created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col space-y-2 ml-6">
+                            <button className="btn-secondary text-sm px-4 py-2">
+                              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View Details
+                            </button>
+                            <button className="btn-secondary text-sm px-4 py-2">
+                              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Edit Proposal
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
-
-
-
-

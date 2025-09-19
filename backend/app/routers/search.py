@@ -1,29 +1,58 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import text
+from sqlalchemy import text, select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_async_session
+from app.db.models import RFP, User
+from app.dependencies.auth import get_current_user
+from app.schemas.rfp import PaginatedRFPs
 
 
 router = APIRouter(prefix="/rfps", tags=["search"])
 
 
-@router.get("/search")
-async def search_rfps(q: str = Query(..., min_length=1), limit: int = 10, offset: int = 0, session: AsyncSession = Depends(get_async_session)):
-    # Using plainto_tsquery for simplicity; parameterized to avoid injection
-    stmt = text(
-        """
-        SELECT id, title, description, status, owner_id
-        FROM rfps
-        WHERE search_vector @@ plainto_tsquery('english', :q)
-        ORDER BY id DESC
-        LIMIT :limit OFFSET :offset
-        """
+@router.get("/search", response_model=PaginatedRFPs)
+async def search_rfps(
+    q: str = Query(..., min_length=1), 
+    page: int = Query(1, ge=1), 
+    limit: int = Query(10, ge=1, le=100), 
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_user)
+):
+    offset = (page - 1) * limit
+    
+    # Build search query with ILIKE for better compatibility
+    search_conditions = or_(
+        RFP.title.ilike(f"%{q}%"),
+        RFP.description.ilike(f"%{q}%"),
+        RFP.requirements.ilike(f"%{q}%")
     )
-    rows = (await session.execute(stmt, {"q": q, "limit": limit, "offset": offset})).mappings().all()
-    return {"items": rows}
+    
+    # Base query
+    stmt = select(RFP).where(search_conditions)
+    count_stmt = select(func.count()).select_from(RFP).where(search_conditions)
+    
+    # Role-based filtering
+    if current_user.role.value == "buyer":
+        # Buyers can only see their own RFPs
+        stmt = stmt.where(RFP.owner_id == current_user.id)
+        count_stmt = count_stmt.where(RFP.owner_id == current_user.id)
+    elif current_user.role.value == "supplier":
+        # Suppliers can only see published RFPs
+        stmt = stmt.where(RFP.status == "PUBLISHED")
+        count_stmt = count_stmt.where(RFP.status == "PUBLISHED")
+    
+    # Get total count
+    total = (await session.execute(count_stmt)).scalar_one()
+    
+    # Get paginated results
+    items = (await session.execute(
+        stmt.order_by(RFP.id.desc()).limit(limit).offset(offset)
+    )).scalars().all()
+    
+    return PaginatedRFPs(total=total, items=items, page=page, limit=limit)
 
 
 
