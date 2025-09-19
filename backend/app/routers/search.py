@@ -10,10 +10,10 @@ from app.dependencies.auth import get_current_user
 from app.schemas.rfp import PaginatedRFPs
 
 
-router = APIRouter(prefix="/rfps", tags=["search"])
+router = APIRouter(prefix="/search", tags=["search"])
 
 
-@router.get("/search", response_model=PaginatedRFPs)
+@router.get("/rfps", response_model=PaginatedRFPs)
 async def search_rfps(
     q: str = Query(..., min_length=1), 
     page: int = Query(1, ge=1), 

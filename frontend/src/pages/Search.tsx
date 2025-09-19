@@ -9,16 +9,24 @@ export const Search: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data: searchResults, isLoading } = useQuery({
+  const { data: searchResults, isLoading, error } = useQuery({
     queryKey: ['search', searchTerm, page],
-    queryFn: () => apiClient.searchRFPs(searchTerm, page, 10),
+    queryFn: () => {
+      console.log('Searching for:', searchTerm, 'page:', page);
+      return apiClient.searchRFPs(searchTerm, page, 10);
+    },
     enabled: searchTerm.length > 0,
+    onError: (error) => {
+      console.error('Search error:', error);
+    },
   });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearchTerm(query);
-    setPage(1);
+    if (query.trim().length > 0) {
+      setSearchTerm(query.trim());
+      setPage(1);
+    }
   };
 
   const handleStatusFilter = (status: string) => {
@@ -126,6 +134,28 @@ export const Search: React.FC = () => {
               <div className="text-center">
                 <div className="spinner h-16 w-16 mx-auto mb-4"></div>
                 <p className="text-secondary-600 font-medium">Searching RFPs...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="card-elevated animate-fade-in-up">
+              <div className="p-12 text-center">
+                <div className="h-24 w-24 bg-error-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="h-12 w-12 text-error-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-secondary-900 mb-4">
+                  Search Error
+                </h3>
+                <p className="text-secondary-600 text-lg max-w-md mx-auto">
+                  There was an error searching for RFPs. Please try again.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="btn-primary mt-4"
+                >
+                  Retry Search
+                </button>
               </div>
             </div>
           ) : searchTerm ? (
