@@ -97,144 +97,144 @@ export const Register: React.FC = () => {
             </div>
             <h2 className="text-3xl font-bold text-gradient">
               Create Account
-            </h2>
+          </h2>
             <p className="mt-2 text-secondary-600">
               Join our RFP Management platform today
-            </p>
-          </div>
+          </p>
+        </div>
 
           <div className="card-elevated p-8">
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-              {error && (
+          {error && (
                 <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-xl animate-fade-in-down">
                   <div className="flex items-center">
                     <svg className="h-5 w-5 text-error-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {error}
+              {error}
                   </div>
-                </div>
-              )}
+            </div>
+          )}
 
               <div className="space-y-5">
-                <div>
+            <div>
                   <label htmlFor="email" className="block text-sm font-semibold text-secondary-700 mb-2">
                     Email Address
-                  </label>
+              </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <svg className="h-5 w-5 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                       </svg>
                     </div>
-                    <input
-                      {...register('email')}
-                      type="email"
-                      autoComplete="email"
+              <input
+                {...register('email')}
+                type="email"
+                autoComplete="email"
                       className="input-field pl-10"
-                      placeholder="Enter your email"
-                    />
+                placeholder="Enter your email"
+              />
                   </div>
-                  {errors.email && (
+              {errors.email && (
                     <p className="mt-2 text-sm text-error-600 flex items-center">
                       <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       {errors.email.message}
                     </p>
-                  )}
-                </div>
+              )}
+            </div>
 
-                <div>
+            <div>
                   <label htmlFor="role" className="block text-sm font-semibold text-secondary-700 mb-2">
                     I am a...
-                  </label>
+              </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <svg className="h-5 w-5 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                     </div>
-                    <select
-                      {...register('role')}
+              <select
+                {...register('role')}
                       className="input-field pl-10 appearance-none cursor-pointer"
-                    >
-                      <option value="">Select your role</option>
+              >
+                <option value="">Select your role</option>
                       <option value="buyer">Buyer - I create RFPs</option>
                       <option value="supplier">Supplier - I respond to RFPs</option>
-                    </select>
+              </select>
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                       <svg className="h-5 w-5 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
                   </div>
-                  {errors.role && (
+              {errors.role && (
                     <p className="mt-2 text-sm text-error-600 flex items-center">
                       <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       {errors.role.message}
                     </p>
-                  )}
-                </div>
+              )}
+            </div>
 
-                <div>
+            <div>
                   <label htmlFor="password" className="block text-sm font-semibold text-secondary-700 mb-2">
-                    Password
-                  </label>
+                Password
+              </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <svg className="h-5 w-5 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
-                    <input
-                      {...register('password')}
-                      type="password"
-                      autoComplete="new-password"
+              <input
+                {...register('password')}
+                type="password"
+                autoComplete="new-password"
                       className="input-field pl-10"
                       placeholder="Create a strong password"
-                    />
+              />
                   </div>
-                  {errors.password && (
+              {errors.password && (
                     <p className="mt-2 text-sm text-error-600 flex items-center">
                       <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       {errors.password.message}
                     </p>
-                  )}
-                </div>
+              )}
+            </div>
 
-                <div>
+            <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-semibold text-secondary-700 mb-2">
-                    Confirm Password
-                  </label>
+                Confirm Password
+              </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <svg className="h-5 w-5 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <input
-                      {...register('confirmPassword')}
-                      type="password"
-                      autoComplete="new-password"
+              <input
+                {...register('confirmPassword')}
+                type="password"
+                autoComplete="new-password"
                       className="input-field pl-10"
-                      placeholder="Confirm your password"
-                    />
+                placeholder="Confirm your password"
+              />
                   </div>
-                  {errors.confirmPassword && (
+              {errors.confirmPassword && (
                     <p className="mt-2 text-sm text-error-600 flex items-center">
                       <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       {errors.confirmPassword.message}
                     </p>
-                  )}
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
 
               <div className="flex items-center">
                 <input
@@ -256,10 +256,10 @@ export const Register: React.FC = () => {
                 </label>
               </div>
 
-              <div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
                   className="btn-primary w-full flex items-center justify-center"
                 >
                   {isLoading ? (
@@ -275,8 +275,8 @@ export const Register: React.FC = () => {
                       Create account
                     </>
                   )}
-                </button>
-              </div>
+            </button>
+          </div>
 
               <div className="text-center">
                 <p className="text-sm text-secondary-600">
@@ -289,7 +289,7 @@ export const Register: React.FC = () => {
                   </Link>
                 </p>
               </div>
-            </form>
+        </form>
           </div>
         </div>
       </div>
