@@ -141,7 +141,7 @@ jobs:
         retention-days: 30
     
     - name: Comment performance results
-      uses: actions/github-script@v6
+      uses: actions/github-script@v8
       if: always() && github.event_name == 'schedule'
       with:
         script: |
