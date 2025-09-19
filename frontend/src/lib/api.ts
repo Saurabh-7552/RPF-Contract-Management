@@ -116,6 +116,11 @@ class ApiClient {
     return response.data;
   }
 
+  async updateRFPResponse(rfpId: number, responseId: number, content: string) {
+    const response = await this.client.put(`/rfps/${rfpId}/respond/${responseId}`, { content });
+    return response.data;
+  }
+
   async changeRFPStatus(id: number, status: string) {
     const response = await this.client.patch(`/rfps/${id}/status?new_status=${status}`);
     return response.data;

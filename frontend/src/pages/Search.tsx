@@ -68,7 +68,22 @@ export const Search: React.FC = () => {
       setSearchTerm(query.trim());
       setPage(1);
     } else {
-      console.log('Query is empty, not searching');
+      console.log('Query is empty, clearing search');
+      setSearchTerm('');
+      setPage(1);
+    }
+  };
+
+  // Clear search when input is empty
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+    
+    // If input is cleared, immediately clear search results
+    if (value.trim().length === 0 && searchTerm.length > 0) {
+      console.log('Input cleared, clearing search results');
+      setSearchTerm('');
+      setPage(1);
     }
   };
 
@@ -121,13 +136,28 @@ export const Search: React.FC = () => {
                     <input
                       type="text"
                       value={query}
-                      onChange={(e) => setQuery(e.target.value)}
+                      onChange={handleInputChange}
                       placeholder={user?.role === 'supplier' 
                         ? "Search all published RFPs by title or description..."
                         : "Search your RFPs by title or description..."
                       }
-                      className="input-field pl-10"
+                      className="input-field pl-10 pr-10"
                     />
+                    {query.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuery('');
+                          setSearchTerm('');
+                          setPage(1);
+                        }}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-secondary-400 hover:text-secondary-600 transition-colors"
+                      >
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
                 <button

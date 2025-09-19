@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
@@ -217,6 +218,51 @@ async def get_supplier_responses(
         })
     
     return {"responses": responses}
+
+
+@router.put("/{rfp_id}/respond/{response_id}", response_model=dict, dependencies=[Depends(require_role(UserRole.supplier))])
+async def update_rfp_response(
+    rfp_id: int,
+    response_id: int,
+    payload: ResponseCreate,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(get_current_user),
+    background_tasks: BackgroundTasks = None
+):
+    """Update an existing RFP response and optionally change RFP status"""
+    # Get the RFP
+    rfp = (await session.execute(select(RFP).where(RFP.id == rfp_id))).scalar_one_or_none()
+    if not rfp:
+        raise HTTPException(status_code=404, detail="RFP not found")
+    
+    # Get the response
+    response = (await session.execute(
+        select(SupplierResponse).where(
+            SupplierResponse.id == response_id,
+            SupplierResponse.rfp_id == rfp_id,
+            SupplierResponse.supplier_id == user.id
+        )
+    )).scalar_one_or_none()
+    
+    if not response:
+        raise HTTPException(status_code=404, detail="Response not found or you don't have permission to edit it")
+    
+    # Update the response content
+    response.content = payload.content
+    response.updated_at = datetime.utcnow()
+    
+    # If RFP is currently RESPONSE_SUBMITTED, change it back to PUBLISHED
+    if rfp.status == RFPStatus.RESPONSE_SUBMITTED:
+        rfp.status = RFPStatus.PUBLISHED
+    
+    await session.commit()
+    
+    # Notify buyer/owner about the update
+    owner = (await session.execute(select(User).where(User.id == rfp.owner_id))).scalar_one()
+    task_service = get_background_task_service(background_tasks)
+    task_service.send_email(owner.email, "RFP Response Updated", f"Your RFP '{rfp.title}' response has been updated.")
+    
+    return {"message": "Response updated successfully", "rfp_status": rfp.status.value}
 
 
 @router.get("/supplier/published")

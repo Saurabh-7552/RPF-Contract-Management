@@ -16,6 +16,9 @@ export const SupplierDashboard: React.FC = () => {
   const [selectedRFP, setSelectedRFP] = useState<any>(null);
   const [showResponseForm, setShowResponseForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'opportunities' | 'proposals'>('opportunities');
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [editingResponse, setEditingResponse] = useState<any>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -24,6 +27,7 @@ export const SupplierDashboard: React.FC = () => {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<ResponseForm>({
     resolver: zodResolver(responseSchema),
   });
@@ -46,8 +50,25 @@ export const SupplierDashboard: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['available-rfps'] });
       queryClient.invalidateQueries({ queryKey: ['supplier-responses'] });
-      setShowResponseForm(false);
-      setSelectedRFP(null);
+      setShowSuccessMessage(true);
+      // Add a small delay before closing the form for better UX
+      setTimeout(() => {
+        setShowResponseForm(false);
+        setSelectedRFP(null);
+        setShowSuccessMessage(false);
+        reset();
+      }, 2000); // 2 second delay to show success message
+    },
+  });
+
+  const updateResponseMutation = useMutation({
+    mutationFn: ({ rfpId, responseId, content }: { rfpId: number; responseId: number; content: string }) =>
+      apiClient.updateRFPResponse(rfpId, responseId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['available-rfps'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-responses'] });
+      setShowEditForm(false);
+      setEditingResponse(null);
       reset();
     },
   });
@@ -61,6 +82,23 @@ export const SupplierDashboard: React.FC = () => {
   const handleRespond = (rfp: any) => {
     setSelectedRFP(rfp);
     setShowResponseForm(true);
+    setShowSuccessMessage(false);
+  };
+
+  const handleEditResponse = (response: any) => {
+    setEditingResponse(response);
+    setShowEditForm(true);
+    setValue('content', response.content);
+  };
+
+  const onEditSubmit = (data: ResponseForm) => {
+    if (editingResponse) {
+      updateResponseMutation.mutate({ 
+        rfpId: editingResponse.rfp_id, 
+        responseId: editingResponse.id, 
+        content: data.content 
+      });
+    }
   };
 
   if (rfpsLoading || responsesLoading) {
@@ -163,23 +201,38 @@ export const SupplierDashboard: React.FC = () => {
 
           {/* Response Form */}
           {showResponseForm && selectedRFP && (
-            <div className="card-elevated p-8 mb-8 animate-scale-in">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-secondary-900">
-                  Submit Proposal
-              </h2>
-                <button
-                  onClick={() => {
-                    setShowResponseForm(false);
-                    setSelectedRFP(null);
-                  }}
-                  className="text-secondary-400 hover:text-secondary-600 transition-colors"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+            <div className={`card-elevated p-8 mb-8 transition-all duration-500 ${showSuccessMessage ? 'animate-fade-out' : 'animate-scale-in'}`}>
+              {showSuccessMessage ? (
+                // Success Message
+                <div className="text-center py-8">
+                  <div className="h-20 w-20 bg-success-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="h-10 w-10 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-success-600 mb-2">Proposal Submitted Successfully!</h3>
+                  <p className="text-secondary-600 text-lg">Your proposal has been sent to the buyer. You can track its status in the "My Proposals" tab.</p>
+                </div>
+              ) : (
+                // Form Content
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-secondary-900">
+                      Submit Proposal
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setShowResponseForm(false);
+                        setSelectedRFP(null);
+                        setShowSuccessMessage(false);
+                      }}
+                      className="text-secondary-400 hover:text-secondary-600 transition-colors"
+                    >
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
               
               <div className="mb-6 p-6 bg-gradient-to-r from-primary-50 to-accent-50 rounded-2xl border border-primary-200">
                 <h3 className="text-lg font-semibold text-secondary-900 mb-2">{selectedRFP.title}</h3>
@@ -248,6 +301,86 @@ export const SupplierDashboard: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                         <span>Submit Proposal</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Edit Response Form */}
+          {showEditForm && editingResponse && (
+            <div className="card-elevated p-8 mb-8 animate-scale-in">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-secondary-900">
+                  Edit Proposal
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingResponse(null);
+                  }}
+                  className="text-secondary-400 hover:text-secondary-600 transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* RFP Preview */}
+              <div className="bg-secondary-50 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold text-secondary-900 mb-2">{editingResponse.rfp_title}</h3>
+                <p className="text-secondary-600 text-sm">Buyer: {editingResponse.owner_email}</p>
+              </div>
+
+              <form onSubmit={handleSubmit(onEditSubmit)} className="space-y-6">
+                <div>
+                  <label htmlFor="edit-content" className="block text-sm font-medium text-secondary-700 mb-2">
+                    Your Proposal
+                  </label>
+                  <textarea
+                    id="edit-content"
+                    {...register('content')}
+                    rows={6}
+                    className="input-field"
+                    placeholder="Describe your proposal, pricing, timeline, and any other relevant details..."
+                  />
+                  {errors.content && (
+                    <p className="mt-1 text-sm text-error-600">{errors.content.message}</p>
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setEditingResponse(null);
+                    }}
+                    className="btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateResponseMutation.isPending}
+                    className="btn-primary flex items-center space-x-2"
+                  >
+                    {updateResponseMutation.isPending ? (
+                      <>
+                        <div className="spinner h-4 w-4"></div>
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Update Proposal</span>
                       </>
                     )}
                   </button>
@@ -422,12 +555,17 @@ export const SupplierDashboard: React.FC = () => {
                               </svg>
                               View Details
                             </button>
-                            <button className="btn-secondary text-sm px-4 py-2">
-                              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                              Edit Proposal
-                            </button>
+                            {response.rfp_status === 'RESPONSE_SUBMITTED' && (
+                              <button 
+                                onClick={() => handleEditResponse(response)}
+                                className="btn-primary text-sm px-4 py-2"
+                              >
+                                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit Proposal
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
