@@ -41,9 +41,9 @@ async def search_rfps(
         stmt = stmt.where(RFP.owner_id == current_user.id)
         count_stmt = count_stmt.where(RFP.owner_id == current_user.id)
     elif current_user.role.value == "supplier":
-        # Suppliers can see all published RFPs (no additional filtering by default)
-        stmt = stmt.where(RFP.status == "PUBLISHED")
-        count_stmt = count_stmt.where(RFP.status == "PUBLISHED")
+        # Suppliers can see published RFPs and RFPs they've responded to
+        stmt = stmt.where(RFP.status.in_(["PUBLISHED", "RESPONSE_SUBMITTED"]))
+        count_stmt = count_stmt.where(RFP.status.in_(["PUBLISHED", "RESPONSE_SUBMITTED"]))
     
     # Apply status filter if provided
     if status:

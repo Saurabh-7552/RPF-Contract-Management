@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 
 const rfpSchema = z.object({
@@ -15,6 +16,7 @@ type RFPForm = z.infer<typeof rfpSchema>;
 export const BuyerDashboard: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -293,19 +295,11 @@ export const BuyerDashboard: React.FC = () => {
                               </svg>
                               Created {new Date(rfp.created_at).toLocaleDateString()}
                             </span>
-                            {rfp.deadline && (
-                              <span className="flex items-center">
-                                <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Deadline: {new Date(rfp.deadline).toLocaleDateString()}
-                              </span>
-                            )}
                           </div>
                         </div>
                         <div className="flex flex-col space-y-2 ml-6">
                           <button 
-                            onClick={() => window.open(`/rfp/${rfp.id}`, '_blank')}
+                            onClick={() => navigate(`/rfp/${rfp.id}`)}
                             className="btn-secondary text-sm px-4 py-2"
                           >
                             <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

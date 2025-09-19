@@ -141,6 +141,11 @@ class ApiClient {
     return response.data;
   }
 
+  async getAvailableRFPsWithOwners(limit = 10, offset = 0) {
+    const response = await this.client.get(`/rfps/supplier/available?limit=${limit}&offset=${offset}`);
+    return response.data;
+  }
+
   // Upload endpoints
   async getPresignedUrl(filename: string, contentType: string) {
     const response = await this.client.post('/uploads/presign', { filename, content_type: contentType });

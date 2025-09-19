@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 
 const responseSchema = z.object({
@@ -16,6 +17,7 @@ export const SupplierDashboard: React.FC = () => {
   const [showResponseForm, setShowResponseForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'opportunities' | 'proposals'>('opportunities');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -26,10 +28,10 @@ export const SupplierDashboard: React.FC = () => {
     resolver: zodResolver(responseSchema),
   });
 
-  // Fetch published RFPs with owner information
+  // Fetch available RFPs (published and response submitted) with owner information
   const { data: publishedRFPs, isLoading: rfpsLoading } = useQuery({
-    queryKey: ['published-rfps'],
-    queryFn: () => apiClient.getPublishedRFPsWithOwners(50, 0),
+    queryKey: ['available-rfps'],
+    queryFn: () => apiClient.getAvailableRFPsWithOwners(50, 0),
   });
 
   // Fetch supplier's submitted responses
@@ -42,7 +44,7 @@ export const SupplierDashboard: React.FC = () => {
     mutationFn: ({ rfpId, content }: { rfpId: number; content: string }) =>
       apiClient.respondToRFP(rfpId, content),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['published-rfps'] });
+      queryClient.invalidateQueries({ queryKey: ['available-rfps'] });
       queryClient.invalidateQueries({ queryKey: ['supplier-responses'] });
       setShowResponseForm(false);
       setSelectedRFP(null);
@@ -285,8 +287,15 @@ export const SupplierDashboard: React.FC = () => {
                         <div className="flex-1">
                             <div className="flex items-center space-x-3 mb-3">
                               <h3 className="text-xl font-semibold text-secondary-900">{rfp.title}</h3>
-                              <span className="status-badge status-published">
-                                Published
+                              <span className={`status-badge ${
+                                rfp.status === 'DRAFT' ? 'status-draft' :
+                                rfp.status === 'PUBLISHED' ? 'status-published' :
+                                rfp.status === 'RESPONSE_SUBMITTED' ? 'status-response-submitted' :
+                                rfp.status === 'UNDER_REVIEW' ? 'status-under-review' :
+                                rfp.status === 'APPROVED' ? 'status-approved' :
+                                'status-rejected'
+                              }`}>
+                                {rfp.status.replace('_', ' ')}
                               </span>
                             </div>
                             <p className="text-secondary-600 mb-4 line-clamp-2">{rfp.description}</p>
@@ -303,14 +312,6 @@ export const SupplierDashboard: React.FC = () => {
                                 </svg>
                                 Posted: {new Date(rfp.created_at).toLocaleDateString()}
                               </span>
-                              {rfp.deadline && (
-                                <span className="flex items-center">
-                                  <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  Deadline: {new Date(rfp.deadline).toLocaleDateString()}
-                                </span>
-                              )}
                             </div>
                           </div>
                           <div className="flex flex-col space-y-2 ml-6">
@@ -324,7 +325,7 @@ export const SupplierDashboard: React.FC = () => {
                               Submit Proposal
                           </button>
                             <button 
-                              onClick={() => window.open(`/rfp/${rfp.id}`, '_blank')}
+                              onClick={() => navigate(`/rfp/${rfp.id}`)}
                               className="btn-secondary text-sm px-4 py-2"
                             >
                               <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -412,7 +413,7 @@ export const SupplierDashboard: React.FC = () => {
                           </div>
                           <div className="flex flex-col space-y-2 ml-6">
                             <button 
-                              onClick={() => window.open(`/rfp/${response.rfp_id}`, '_blank')}
+                              onClick={() => navigate(`/rfp/${response.rfp_id}`)}
                               className="btn-secondary text-sm px-4 py-2"
                             >
                               <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -248,7 +248,49 @@ async def get_published_rfps_with_owners(
             "description": rfp.description,
             "status": rfp.status.value,
             "created_at": rfp.created_at,
-            "deadline": rfp.deadline,
+            "owner": {
+                "id": owner.id,
+                "email": owner.email
+            }
+        })
+    
+    return {
+        "total": total,
+        "items": rfps_with_owners,
+        "limit": limit,
+        "offset": offset
+    }
+
+
+@router.get("/supplier/available")
+async def get_available_rfps_with_owners(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(require_role(UserRole.supplier)),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """Get all available RFPs (published and response submitted) with owner information for suppliers"""
+    stmt = select(RFP, User).join(
+        User, RFP.owner_id == User.id
+    ).where(
+        RFP.status.in_([RFPStatus.PUBLISHED, RFPStatus.RESPONSE_SUBMITTED])
+    ).order_by(RFP.id.desc()).limit(limit).offset(offset)
+    
+    count_stmt = select(func.count()).select_from(RFP).where(
+        RFP.status.in_([RFPStatus.PUBLISHED, RFPStatus.RESPONSE_SUBMITTED])
+    )
+    
+    total = (await session.execute(count_stmt)).scalar_one()
+    results = (await session.execute(stmt)).all()
+    
+    rfps_with_owners = []
+    for rfp, owner in results:
+        rfps_with_owners.append({
+            "id": rfp.id,
+            "title": rfp.title,
+            "description": rfp.description,
+            "status": rfp.status.value,
+            "created_at": rfp.created_at,
             "owner": {
                 "id": owner.id,
                 "email": owner.email
