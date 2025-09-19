@@ -1,0 +1,180 @@
+name: Performance Tests
+
+on:
+  schedule:
+    - cron: '0 4 * * 0'  # Weekly on Sunday at 4 AM
+  workflow_dispatch:
+
+jobs:
+  performance-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: rfp_contracts_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install locust
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Set up test database
+      run: |
+        cd backend
+        export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/rfp_contracts_test"
+        python -m alembic upgrade head
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/rfp_contracts_test
+        SECRET_KEY: test-secret-key-for-performance
+        REDIS_URL: redis://localhost:6379
+        SENDGRID_KEY: test-sendgrid-key
+        SENDGRID_FROM: test@example.com
+    
+    - name: Start backend server
+      run: |
+        cd backend
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        sleep 10
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/rfp_contracts_test
+        SECRET_KEY: test-secret-key-for-performance
+        REDIS_URL: redis://localhost:6379
+        SENDGRID_KEY: test-sendgrid-key
+        SENDGRID_FROM: test@example.com
+    
+    - name: Create performance test data
+      run: |
+        cd backend
+        python -c "
+        import asyncio
+        from app.db.session import get_async_session
+        from app.db.models import User, RFP, UserRole, RFPStatus
+        from app.core.security import hash_password
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.orm import sessionmaker
+        
+        async def create_test_data():
+            engine = create_async_engine('postgresql+asyncpg://postgres:postgres@localhost:5432/rfp_contracts_test')
+            async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+            
+            async with async_session() as session:
+                # Create test users
+                for i in range(10):
+                    user = User(
+                        email=f'user{i}@example.com',
+                        hashed_password=hash_password('password123'),
+                        role=UserRole.buyer if i % 2 == 0 else UserRole.supplier
+                    )
+                    session.add(user)
+                
+                await session.commit()
+                
+                # Create test RFPs
+                for i in range(50):
+                    rfp = RFP(
+                        title=f'Performance Test RFP {i}',
+                        description=f'Description for RFP {i}',
+                        status=RFPStatus.PUBLISHED,
+                        owner_id=(i % 5) + 1
+                    )
+                    session.add(rfp)
+                
+                await session.commit()
+        
+        asyncio.run(create_test_data())
+        "
+    
+    - name: Run Locust performance tests
+      run: |
+        cd backend
+        locust -f tests/performance/locustfile.py --headless -u 10 -r 2 -t 30s --html performance-report.html
+      continue-on-error: true
+    
+    - name: Run frontend performance tests
+      run: |
+        cd frontend
+        npm run build
+        npx lighthouse http://localhost:5173 --output=json --output-path=lighthouse-report.json --chrome-flags="--headless" || true
+      continue-on-error: true
+    
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-reports-${{ github.run_number }}
+        path: |
+          backend/performance-report.html
+          frontend/lighthouse-report.json
+        retention-days: 30
+    
+    - name: Comment performance results
+      uses: actions/github-script@v6
+      if: always() && github.event_name == 'schedule'
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let comment = '## 📊 Weekly Performance Report\n\n';
+          
+          try {
+            const lighthouseReport = JSON.parse(fs.readFileSync('frontend/lighthouse-report.json', 'utf8'));
+            const scores = lighthouseReport.categories;
+            
+            comment += '### Lighthouse Scores\n';
+            comment += `- **Performance**: ${Math.round(scores.performance.score * 100)}\n`;
+            comment += `- **Accessibility**: ${Math.round(scores.accessibility.score * 100)}\n`;
+            comment += `- **Best Practices**: ${Math.round(scores['best-practices'].score * 100)}\n`;
+            comment += `- **SEO**: ${Math.round(scores.seo.score * 100)}\n\n`;
+          } catch (e) {
+            comment += '### Lighthouse Scores\nUnable to generate scores.\n\n';
+          }
+          
+          comment += '### Load Test Results\n';
+          comment += 'Check the uploaded artifacts for detailed Locust performance test results.\n\n';
+          comment += '---\n*Performance test completed. Review the artifacts for detailed metrics.*';
+          
+          // Create an issue with performance results
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `Weekly Performance Report - ${new Date().toISOString().split('T')[0]}`,
+            body: comment,
+            labels: ['performance', 'report']
+          });
+
+
+
+

@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlalchemy[asyncio]
+alembic
+pydantic
+passlib
+bcrypt
+python-jose
+boto3
+sendgrid
+asyncpg
+pytest
+httpx
+celery[redis]
+pytest-asyncio
+
+

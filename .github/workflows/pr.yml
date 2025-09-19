@@ -1,0 +1,108 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  pr-checks:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: rfp_contracts_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Set up test database
+      run: |
+        cd backend
+        export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/rfp_contracts_test"
+        python -m alembic upgrade head
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/rfp_contracts_test
+        SECRET_KEY: test-secret-key-for-ci
+        REDIS_URL: redis://localhost:6379
+        SENDGRID_KEY: test-sendgrid-key
+        SENDGRID_FROM: test@example.com
+    
+    - name: Run backend tests
+      run: |
+        cd backend
+        pytest -v --tb=short --cov=app --cov-report=xml
+      env:
+        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/rfp_contracts_test
+        SECRET_KEY: test-secret-key-for-ci
+        REDIS_URL: redis://localhost:6379
+        SENDGRID_KEY: test-sendgrid-key
+        SENDGRID_FROM: test@example.com
+    
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm run test:run -- --coverage
+    
+    - name: Run frontend linting
+      run: |
+        cd frontend
+        npm run lint || echo "Linting issues found"
+    
+    - name: Check TypeScript compilation
+      run: |
+        cd frontend
+        npx tsc --noEmit
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml,./frontend/coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+
+
+
