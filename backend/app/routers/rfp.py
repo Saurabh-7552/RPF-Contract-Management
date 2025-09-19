@@ -150,8 +150,8 @@ async def change_status(
     rfp = (await session.execute(select(RFP).where(RFP.id == rfp_id))).scalar_one_or_none()
     if not rfp:
         raise HTTPException(status_code=404, detail="RFP not found")
-    if rfp.owner_id != user.id and user.role != UserRole.buyer:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    if rfp.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Only RFP owner can change status")
 
     try:
         target = RFPStatus(new_status)
@@ -246,7 +246,6 @@ async def get_published_rfps_with_owners(
             "id": rfp.id,
             "title": rfp.title,
             "description": rfp.description,
-            "requirements": rfp.requirements,
             "status": rfp.status.value,
             "created_at": rfp.created_at,
             "deadline": rfp.deadline,

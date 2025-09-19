@@ -147,12 +147,6 @@ export const RFPDetail: React.FC = () => {
                   <p className="text-gray-600 whitespace-pre-wrap">{rfp.description}</p>
                 </div>
 
-                {rfp.requirements && (
-                  <div>
-                    <h2 className="text-lg font-medium text-gray-900 mb-2">Requirements</h2>
-                    <p className="text-gray-600 whitespace-pre-wrap">{rfp.requirements}</p>
-                  </div>
-                )}
 
                 <div>
                   <div className="flex justify-between items-center mb-4">

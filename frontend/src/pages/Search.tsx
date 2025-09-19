@@ -11,27 +11,64 @@ export const Search: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data: searchResults, isLoading, error } = useQuery({
+  // Search query - only enabled when there's a search term
+  const { data: searchResults, isLoading: searchLoading, error: searchError } = useQuery({
     queryKey: ['search', searchTerm, page, statusFilter],
     queryFn: () => {
-      console.log('Searching for:', searchTerm, 'page:', page, 'status:', statusFilter);
+      console.log('useQuery triggered - Searching for:', searchTerm, 'page:', page, 'status:', statusFilter);
       return apiClient.searchRFPs(searchTerm, page, 10, statusFilter || undefined);
     },
     enabled: searchTerm.length > 0,
   });
 
+  // Default RFP list query - enabled when no search term
+  const { data: defaultResults, isLoading: defaultLoading, error: defaultError } = useQuery({
+    queryKey: ['default-rfps', page, statusFilter, user?.role],
+    queryFn: () => {
+      console.log('Fetching default RFPs for role:', user?.role, 'page:', page, 'status:', statusFilter);
+      if (user?.role === 'supplier') {
+        return apiClient.getPublishedRFPsWithOwners(10, (page - 1) * 10);
+      } else {
+        return apiClient.getRFPs(page, 10);
+      }
+    },
+    enabled: searchTerm.length === 0,
+  });
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Search state changed:', { 
+      searchTerm, 
+      page, 
+      statusFilter, 
+      searchLoading, 
+      defaultLoading, 
+      searchError, 
+      defaultError, 
+      searchResults, 
+      defaultResults 
+    });
+  }, [searchTerm, page, statusFilter, searchLoading, defaultLoading, searchError, defaultError, searchResults, defaultResults]);
+
   // Log errors when they occur
   React.useEffect(() => {
-    if (error) {
-      console.error('Search error:', error);
+    if (searchError) {
+      console.error('Search error:', searchError);
     }
-  }, [error]);
+    if (defaultError) {
+      console.error('Default RFP list error:', defaultError);
+    }
+  }, [searchError, defaultError]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Search form submitted with query:', query);
     if (query.trim().length > 0) {
+      console.log('Setting search term to:', query.trim());
       setSearchTerm(query.trim());
       setPage(1);
+    } else {
+      console.log('Query is empty, not searching');
     }
   };
 
@@ -40,9 +77,20 @@ export const Search: React.FC = () => {
     setPage(1); // Reset to first page when filter changes
   };
 
-  // Type-safe access to search results
-  const totalResults = (searchResults as any)?.total || 0;
-  const filteredResults = (searchResults as any)?.items || [];
+  // Determine which data to use and apply client-side filtering
+  const isSearchMode = searchTerm.length > 0;
+  const currentData = isSearchMode ? searchResults : defaultResults;
+  const isLoading = isSearchMode ? searchLoading : defaultLoading;
+  const error = isSearchMode ? searchError : defaultError;
+  
+  // Type-safe access to results
+  const totalResults = (currentData as any)?.total || 0;
+  let filteredResults = (currentData as any)?.items || [];
+  
+  // Apply client-side status filtering for default results (since backend doesn't support it for default lists)
+  if (!isSearchMode && statusFilter && filteredResults.length > 0) {
+    filteredResults = filteredResults.filter((rfp: any) => rfp.status === statusFilter);
+  }
 
   return (
     <div className="min-h-screen">
@@ -145,7 +193,9 @@ export const Search: React.FC = () => {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="spinner h-16 w-16 mx-auto mb-4"></div>
-                <p className="text-secondary-600 font-medium">Searching RFPs...</p>
+                <p className="text-secondary-600 font-medium">
+                  {isSearchMode ? 'Searching RFPs...' : 'Loading RFPs...'}
+                </p>
               </div>
             </div>
           ) : error ? (
@@ -170,15 +220,20 @@ export const Search: React.FC = () => {
                 </button>
               </div>
             </div>
-          ) : searchTerm ? (
+          ) : (
             <div className="card-elevated animate-fade-in-up">
               <div className="p-6 border-b border-secondary-200">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-secondary-900">
-                    Search Results for "{searchTerm}"
+                    {isSearchMode 
+                      ? `Search Results for "${searchTerm}"`
+                      : user?.role === 'supplier' 
+                        ? 'Available RFPs' 
+                        : 'Your RFPs'
+                    }
                   </h2>
                   <span className="text-sm text-secondary-500 bg-secondary-100 px-3 py-1 rounded-full">
-                    {filteredResults.length} results
+                    {filteredResults.length} {isSearchMode ? 'results' : 'RFPs'}
                   </span>
                 </div>
               </div>
@@ -191,8 +246,17 @@ export const Search: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                     </div>
-                    <h3 className="text-lg font-semibold text-secondary-900 mb-2">No results found</h3>
-                    <p className="text-secondary-600">Try adjusting your search terms or filters</p>
+                    <h3 className="text-lg font-semibold text-secondary-900 mb-2">
+                      {isSearchMode ? 'No results found' : 'No RFPs available'}
+                    </h3>
+                    <p className="text-secondary-600">
+                      {isSearchMode 
+                        ? 'Try adjusting your search terms or filters'
+                        : user?.role === 'supplier'
+                          ? 'No published RFPs are currently available'
+                          : 'You haven\'t created any RFPs yet'
+                      }
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -292,25 +356,6 @@ export const Search: React.FC = () => {
                     </nav>
                   </div>
                 )}
-              </div>
-            </div>
-          ) : (
-            <div className="card-elevated animate-fade-in-up">
-              <div className="p-12 text-center">
-                <div className="h-24 w-24 bg-gradient-to-r from-primary-100 to-accent-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="h-12 w-12 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-secondary-900 mb-4">
-                  Start Your Search
-                </h3>
-                <p className="text-secondary-600 text-lg max-w-md mx-auto">
-                  {user?.role === 'supplier'
-                    ? 'Enter keywords to search through all published RFP titles and descriptions to find the perfect opportunities.'
-                    : 'Enter keywords to search through your RFP titles and descriptions to find specific submissions.'
-                  }
-                </p>
               </div>
             </div>
           )}

@@ -8,7 +8,6 @@ import { apiClient } from '../lib/api';
 const rfpSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
-  requirements: z.string().optional(),
 });
 
 type RFPForm = z.infer<typeof rfpSchema>;
@@ -206,25 +205,6 @@ export const BuyerDashboard: React.FC = () => {
                   )}
                 </div>
 
-                <div>
-                  <label htmlFor="requirements" className="block text-sm font-semibold text-secondary-700 mb-2">
-                    Requirements <span className="text-secondary-400">(Optional)</span>
-                  </label>
-                  <textarea
-                    {...register('requirements')}
-                    rows={3}
-                    className="input-field resize-none"
-                    placeholder="List any specific requirements, technical specifications, or criteria..."
-                  />
-                  {errors.requirements && (
-                    <p className="mt-2 text-sm text-error-600 flex items-center">
-                      <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {errors.requirements.message}
-                    </p>
-                  )}
-                </div>
 
                 <div className="flex justify-end space-x-4">
                   <button
@@ -306,12 +286,6 @@ export const BuyerDashboard: React.FC = () => {
                             </span>
                           </div>
                           <p className="text-secondary-600 mb-4 line-clamp-2">{rfp.description}</p>
-                          {rfp.requirements && (
-                            <div className="mb-4">
-                              <p className="text-sm font-medium text-secondary-700 mb-1">Requirements:</p>
-                              <p className="text-sm text-secondary-600 line-clamp-2">{rfp.requirements}</p>
-                            </div>
-                          )}
                           <div className="flex items-center space-x-4 text-sm text-secondary-500">
                             <span className="flex items-center">
                               <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

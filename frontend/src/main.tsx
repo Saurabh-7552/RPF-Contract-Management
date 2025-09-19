@@ -9,11 +9,23 @@ import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { BuyerDashboard } from './pages/BuyerDashboard'
 import { SupplierDashboard } from './pages/SupplierDashboard'
+import { useAuth } from './lib/auth'
 import { RFPDetail } from './pages/RFPDetail'
 import { Search } from './pages/Search'
 import './styles.css'
 
 const queryClient = new QueryClient()
+
+// Dynamic Dashboard Component
+const DynamicDashboard = () => {
+  const { user } = useAuth();
+  
+  if (user?.role === 'supplier') {
+    return <SupplierDashboard />;
+  }
+  
+  return <BuyerDashboard />;
+};
 
 function App() {
   return (
@@ -26,7 +38,7 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute>
                 <Layout>
-                  <BuyerDashboard />
+                  <DynamicDashboard />
                 </Layout>
               </ProtectedRoute>
             } />

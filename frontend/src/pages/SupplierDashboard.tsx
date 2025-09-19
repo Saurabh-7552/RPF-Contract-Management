@@ -182,12 +182,6 @@ export const SupplierDashboard: React.FC = () => {
               <div className="mb-6 p-6 bg-gradient-to-r from-primary-50 to-accent-50 rounded-2xl border border-primary-200">
                 <h3 className="text-lg font-semibold text-secondary-900 mb-2">{selectedRFP.title}</h3>
                 <p className="text-secondary-700 mb-4">{selectedRFP.description}</p>
-                {selectedRFP.requirements && (
-                  <div>
-                    <h4 className="font-semibold text-secondary-800 mb-2">Requirements:</h4>
-                    <p className="text-secondary-700">{selectedRFP.requirements}</p>
-                  </div>
-                )}
                 <div className="mt-4 flex items-center space-x-4 text-sm text-secondary-600">
                   <span className="flex items-center">
                     <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -296,12 +290,6 @@ export const SupplierDashboard: React.FC = () => {
                               </span>
                             </div>
                             <p className="text-secondary-600 mb-4 line-clamp-2">{rfp.description}</p>
-                          {rfp.requirements && (
-                              <div className="mb-4">
-                                <p className="text-sm font-medium text-secondary-700 mb-1">Requirements:</p>
-                                <p className="text-sm text-secondary-600 line-clamp-2">{rfp.requirements}</p>
-                              </div>
-                            )}
                             <div className="flex items-center space-x-4 text-sm text-secondary-500">
                               <span className="flex items-center">
                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

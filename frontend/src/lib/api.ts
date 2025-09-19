@@ -101,7 +101,7 @@ class ApiClient {
     return response.data;
   }
 
-  async createRFP(data: { title: string; description: string; requirements?: string }) {
+  async createRFP(data: { title: string; description: string }) {
     const response = await this.client.post('/rfps', data);
     return response.data;
   }
