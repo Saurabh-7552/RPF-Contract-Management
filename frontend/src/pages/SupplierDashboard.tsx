@@ -53,8 +53,8 @@ export const SupplierDashboard: React.FC = () => {
       setShowSuccessMessage(true);
       // Add a small delay before closing the form for better UX
       setTimeout(() => {
-        setShowResponseForm(false);
-        setSelectedRFP(null);
+      setShowResponseForm(false);
+      setSelectedRFP(null);
         setShowSuccessMessage(false);
         reset();
       }, 2000); // 2 second delay to show success message
@@ -65,8 +65,12 @@ export const SupplierDashboard: React.FC = () => {
     mutationFn: ({ rfpId, responseId, content }: { rfpId: number; responseId: number; content: string }) =>
       apiClient.updateRFPResponse(rfpId, responseId, content),
     onSuccess: () => {
+      // Invalidate all relevant queries to update the UI
       queryClient.invalidateQueries({ queryKey: ['available-rfps'] });
       queryClient.invalidateQueries({ queryKey: ['supplier-responses'] });
+      queryClient.invalidateQueries({ queryKey: ['published-rfps'] });
+      queryClient.invalidateQueries({ queryKey: ['default-rfps'] });
+      queryClient.invalidateQueries({ queryKey: ['search'] });
       setShowEditForm(false);
       setEditingResponse(null);
       reset();
@@ -113,7 +117,10 @@ export const SupplierDashboard: React.FC = () => {
   }
 
   const publishedRFPsList = publishedRFPs?.items || [];
-  const responsesList = supplierResponses?.responses || [];
+  // Filter out responses where RFP status is PUBLISHED (meaning proposal was edited and RFP is back to being available)
+  const responsesList = (supplierResponses?.responses || []).filter((response: any) => 
+    response.rfp_status !== 'PUBLISHED'
+  );
 
   return (
     <div className="min-h-screen">
@@ -219,7 +226,7 @@ export const SupplierDashboard: React.FC = () => {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-secondary-900">
                       Submit Proposal
-                    </h2>
+              </h2>
                     <button
                       onClick={() => {
                         setShowResponseForm(false);
@@ -465,8 +472,8 @@ export const SupplierDashboard: React.FC = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                               </svg>
-                              View Details
-                            </button>
+                            View Details
+                          </button>
                         </div>
                       </div>
                     </div>
