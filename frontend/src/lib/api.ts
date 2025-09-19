@@ -121,8 +121,12 @@ class ApiClient {
     return response.data;
   }
 
-  async searchRFPs(query: string, page = 1, limit = 10) {
-    const response = await this.client.get(`/search/rfps?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`);
+  async searchRFPs(query: string, page = 1, limit = 10, status?: string) {
+    let url = `/search/rfps?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+    if (status) {
+      url += `&status=${encodeURIComponent(status)}`;
+    }
+    const response = await this.client.get(url);
     return response.data;
   }
 

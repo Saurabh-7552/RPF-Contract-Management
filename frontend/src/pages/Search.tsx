@@ -2,24 +2,30 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../lib/api';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
 
 export const Search: React.FC = () => {
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
   const { data: searchResults, isLoading, error } = useQuery({
-    queryKey: ['search', searchTerm, page],
+    queryKey: ['search', searchTerm, page, statusFilter],
     queryFn: () => {
-      console.log('Searching for:', searchTerm, 'page:', page);
-      return apiClient.searchRFPs(searchTerm, page, 10);
+      console.log('Searching for:', searchTerm, 'page:', page, 'status:', statusFilter);
+      return apiClient.searchRFPs(searchTerm, page, 10, statusFilter || undefined);
     },
     enabled: searchTerm.length > 0,
-    onError: (error) => {
-      console.error('Search error:', error);
-    },
   });
+
+  // Log errors when they occur
+  React.useEffect(() => {
+    if (error) {
+      console.error('Search error:', error);
+    }
+  }, [error]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,12 +37,12 @@ export const Search: React.FC = () => {
 
   const handleStatusFilter = (status: string) => {
     setStatusFilter(status);
-    // In a real app, you'd combine this with the search query
+    setPage(1); // Reset to first page when filter changes
   };
 
-  const filteredResults = searchResults?.items?.filter((rfp: any) => 
-    !statusFilter || rfp.status === statusFilter
-  ) || [];
+  // Type-safe access to search results
+  const totalResults = (searchResults as any)?.total || 0;
+  const filteredResults = (searchResults as any)?.items || [];
 
   return (
     <div className="min-h-screen">
@@ -46,7 +52,10 @@ export const Search: React.FC = () => {
           <div className="mb-8 animate-fade-in-down">
             <h1 className="text-4xl font-bold text-gradient mb-2">Search RFPs</h1>
             <p className="text-secondary-600 text-lg">
-              Find and explore available opportunities
+              {user?.role === 'supplier' 
+                ? 'Find and explore all published opportunities from buyers'
+                : 'Search through your submitted RFPs and filter by status'
+              }
             </p>
           </div>
 
@@ -65,7 +74,10 @@ export const Search: React.FC = () => {
                       type="text"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search RFPs by title, description, or requirements..."
+                      placeholder={user?.role === 'supplier' 
+                        ? "Search all published RFPs by title or description..."
+                        : "Search your RFPs by title or description..."
+                      }
                       className="input-field pl-10"
                     />
                   </div>
@@ -213,12 +225,6 @@ export const Search: React.FC = () => {
                             <p className="text-secondary-600 mb-4 line-clamp-2">
                               {rfp.description}
                             </p>
-                            {rfp.requirements && (
-                              <div className="mb-4">
-                                <p className="text-sm font-medium text-secondary-700 mb-1">Requirements:</p>
-                                <p className="text-sm text-secondary-600 line-clamp-2">{rfp.requirements}</p>
-                              </div>
-                            )}
                             <div className="flex items-center space-x-4 text-sm text-secondary-500">
                               <span className="flex items-center">
                                 <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -226,6 +232,14 @@ export const Search: React.FC = () => {
                                 </svg>
                                 Created {new Date(rfp.created_at).toLocaleDateString()}
                               </span>
+                              {user?.role === 'supplier' && rfp.owner && (
+                                <span className="flex items-center">
+                                  <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                  </svg>
+                                  Owner: {rfp.owner.email}
+                                </span>
+                              )}
                               {rfp.deadline && (
                                 <span className="flex items-center">
                                   <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,7 +269,7 @@ export const Search: React.FC = () => {
                 )}
 
                 {/* Pagination */}
-                {searchResults?.total && searchResults.total > 10 && (
+                {totalResults > 10 && (
                   <div className="mt-8 flex justify-center">
                     <nav className="flex items-center space-x-2">
                       <button
@@ -266,11 +280,11 @@ export const Search: React.FC = () => {
                         Previous
                       </button>
                       <span className="px-4 py-2 text-sm text-secondary-700 bg-secondary-50 rounded-lg">
-                        Page {page} of {Math.ceil(searchResults.total / 10)}
+                        Page {page} of {Math.ceil(totalResults / 10)}
                       </span>
                       <button
-                        onClick={() => setPage(Math.min(Math.ceil(searchResults.total / 10), page + 1))}
-                        disabled={page >= Math.ceil(searchResults.total / 10)}
+                        onClick={() => setPage(Math.min(Math.ceil(totalResults / 10), page + 1))}
+                        disabled={page >= Math.ceil(totalResults / 10)}
                         className="btn-secondary text-sm px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Next
@@ -292,7 +306,10 @@ export const Search: React.FC = () => {
                   Start Your Search
                 </h3>
                 <p className="text-secondary-600 text-lg max-w-md mx-auto">
-                  Enter keywords to search through RFP titles, descriptions, and requirements to find the perfect opportunities.
+                  {user?.role === 'supplier'
+                    ? 'Enter keywords to search through all published RFP titles and descriptions to find the perfect opportunities.'
+                    : 'Enter keywords to search through your RFP titles and descriptions to find specific submissions.'
+                  }
                 </p>
               </div>
             </div>
