@@ -26,7 +26,7 @@ jobs:
           - 5432:5432
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -118,7 +118,7 @@ jobs:
           - 5432:5432
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
@@ -199,7 +199,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
@@ -250,7 +250,7 @@ jobs:
     needs: [backend-tests, frontend-tests]
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
